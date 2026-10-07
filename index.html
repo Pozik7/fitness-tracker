@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מעקב תזונה וכושר</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text); padding-bottom: 80px; }
+        header { background: var(--card-bg); padding: 1rem; text-align: center; font-weight: bold; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+        .container { padding: 1rem; max-width: 600px; margin: 0 auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--border); }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .stat-box { background: var(--bg-color); padding: 0.75rem; border-radius: 8px; text-align: center; }
+        .stat-box .val { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+        .stat-box .label { font-size: 0.8rem; color: var(--text-muted); }
+        input[type="number"] { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; margin-top: 0.25rem; font-size: 16px; }
+        button { background: var(--primary); color: white; border: none; padding: 0.6rem; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 0.5rem; }
+        button.btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        .checklist-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+        .workout-nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .workout-nav button { flex: 1; margin-top: 0; }
+        .set-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+        .set-row input { width: 70px; margin-top: 0; text-align: center; }
+        .btn-check { width: 40px; height: 35px; margin-top: 0; padding: 0; }
+        .instructions { font-size: 0.85rem; color: var(--text-muted); background: var(--primary-light); padding: 0.5rem; border-radius: 6px; margin-top: 0.5rem; }
+        .timer-bar { position: fixed; bottom: 60px; left: 0; right: 0; background: #0f172a; color: white; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; }
+        nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 0.5rem 0; max-width: 600px; margin: 0 auto; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header id="header-title">מעקב יומי</header>
+
+    <div class="container">
+        <!-- מעקב -->
+        <div id="tab-daily" class="tab-content active">
+            <div class="card">
+                <div class="card-title">יעדים להיום</div>
+                <div class="grid-2">
+                    <div class="stat-box"><div class="val" id="disp-protein">0 / 160g</div><div class="label">חלבון</div></div>
+                    <div class="stat-box"><div class="val" id="disp-calories">0 / 2200</div><div class="label">קלוריות</div></div>
+                    <div class="stat-box"><div class="val" id="disp-water">0 / 3L</div><div class="label">מים</div></div>
+                    <div class="stat-box"><div class="val" id="disp-steps">0 / 10k</div><div class="label">צעדים</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">עדכון מדדים יומי</div>
+                <div class="grid-2">
+                    <div><label>חלבון (ג')</label><input type="number" id="inp-protein"></div>
+                    <div><label>קלוריות</label><input type="number" id="inp-calories"></div>
+                    <div><label>מים (ליטר)</label><input type="number" step="0.5" id="inp-water"></div>
+                    <div><label>צעדים</label><input type="number" id="inp-steps"></div>
+                </div>
+                <button onclick="saveDailyMetrics()">עדכן מדדים</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">צ'ק-ליסט יומי</div>
+                <div class="checklist-item"><input type="checkbox"> <span>קריאטין (5 גרם)</span></div>
+                <div class="checklist-item"><input type="checkbox"> <span>ויטמינים בבוקר</span></div>
+                <div class="checklist-item"><input type="checkbox"> <span>שתיית 1L מים עד הצהריים</span></div>
+            </div>
+        </div>
+
+        <!-- אימון -->
+        <div id="tab-workout" class="tab-content">
+            <div class="workout-nav">
+                <button class="btn-outline" onclick="loadWorkout('A')">אימון A</button>
+                <button class="btn-outline" onclick="loadWorkout('B')">אימון B</button>
+                <button class="btn-outline" onclick="loadWorkout('C')">אימון C</button>
+            </div>
+            <div id="workout-container"></div>
+        </div>
+
+        <!-- תזונה -->
+        <div id="tab-nutrition" class="tab-content">
+            <div class="card">
+                <div class="card-title">תפריט שבועי</div>
+                <p><strong>בוקר:</strong> 3 ביצים, 50ג' גבינה צהובה 9%, עגבניה, 2 פרוסות לחם קל.</p>
+                <br>
+                <p><strong>צהריים:</strong> 200ג' חזה עוף/הודו + 150ג' אורז + ירקות.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">ארוחת ערב (זוגית) 🥑</div>
+                <p>טורטיה קלה / חביתה מ-4 ביצים + סלט גדול + בולגרית 5% + טחינה/אבוקדו.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">חטיף / מתוק יומי 🍫</div>
+                <p>חטיף חלבון עד 200 קלוריות או מעדן פרו + מתוק קטן.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">רשימת קניות שבועית</div>
+                <div class="checklist-item"><input type="checkbox"> <span>חזה עוף / הודו (1.5 ק"ג)</span></div>
+                <div class="checklist-item"><input type="checkbox"> <span>תבניות ביצים (XL)</span></div>
+                <div class="checklist-item"><input type="checkbox"> <span>מעדני חלבון PRO</span></div>
+                <div class="checklist-item"><input type="checkbox"> <span>ירקות מגוונים</span></div>
+            </div>
+        </div>
+
+        <!-- התקדמות -->
+        <div id="tab-progress" class="tab-content">
+            <div class="card">
+                <div class="card-title">עדכון התקדמות</div>
+                <div class="grid-2">
+                    <div><label>משקל (ק"ג)</label><input type="number" step="0.1" id="inp-weight"></div>
+                    <div><label>היקף בטן (ס"מ)</label><input type="number" step="0.5" id="inp-waist"></div>
+                </div>
+                <button onclick="addProgressEntry()">רשום מדדים</button>
+            </div>
+            <div class="card">
+                <div class="card-title">מגמת משקל</div>
+                <canvas id="weightChart" style="width:100%; max-height:200px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- טיימר -->
+    <div id="timer-bar" class="timer-bar" style="display: none;">
+        <span>זמן מנוחה: <strong id="timer-display">01:30</strong></span>
+        <button onclick="stopTimer()" style="width:auto; margin:0; padding: 0.3rem 0.8rem; background:#ef4444;">עצור</button>
+    </div>
+
+    <!-- תפריט תחתון -->
+    <nav>
+        <div class="nav-item active" onclick="switchTab('daily', this)"><span>📊</span>מעקב</div>
+        <div class="nav-item" onclick="switchTab('workout', this)"><span>🏋️</span>אימון</div>
+        <div class="nav-item" onclick="switchTab('nutrition', this)"><span>🍽️</span>תזונה</div>
+        <div class="nav-item" onclick="switchTab('progress', this)"><span>📈</span>התקדמות</div>
+    </nav>
+
+    <script>
+        let timerInterval = null;
+        let chartInstance = null;
+
+        const workoutsData = {
+            'A': [{ name: "לחיצת חזה במוט", sets: 3, reps: "8-10", lastWeight: "70 ק\"ג", notes: "מרפקים ב-45 מעלות" }, { name: "לחיצת כתפיים", sets: 3, reps: "8-10", lastWeight: "18 ק\"ג", notes: "גב זקוף" }],
+            'B': [{ name: "פולי עליון", sets: 3, reps: "8-10", lastWeight: "60 ק\"ג", notes: "להוביל מרפקים" }],
+            'C': [{ name: "סקוואט", sets: 4, reps: "6-8", lastWeight: "90 ק\"ג", notes: "לרדת לפחות 90 מעלות" }]
+        };
+
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(tab-${tabId}).classList.add('active');
+            el.classList.add('active');
+            if(tabId === 'progress') initChart();
+        }
+
+        function saveDailyMetrics() {
+            document.getElementById('disp-protein').innerText = ${document.getElementById('inp-protein').value || 0} / 160g;
+            document.getElementById('disp-calories').innerText = ${document.getElementById('inp-calories').value || 0} / 2200;
+            document.getElementById('disp-water').innerText = ${document.getElementById('inp-water').value || 0} / 3L;
+            document.getElementById('disp-steps').innerText = ${document.getElementById('inp-steps').value || 0} / 10k;
+            alert("המדדים עודכנו!");
+        }
+
+        function loadWorkout(type) {
+            const container = document.getElementById('workout-container');
+            let html = <h3 style="margin-bottom:1rem;">אימון ${type}</h3>;
+            workoutsData[type].forEach(ex => {
+                html += <div class="card"><div class="card-title">${ex.name}</div><div style="font-size:0.85rem;">משקל אחרון: ${ex.lastWeight}</div>;
+                for(let i=1; i<=ex.sets; i++) {
+                    html += <div class="set-row"><span>סט ${i}:</span> <input type="number" placeholder="משקל"> <input type="number" placeholder="חזרות"> <button class="btn-check btn-outline" onclick="completeSet(this)">✓</button></div>;
+                }
+                html += <div class="instructions">💡 ${ex.notes}</div></div>;
+            });
+            container.innerHTML = html;
+        }
+
+        function completeSet(btn) {
+            btn.style.background = "var(--success)";
+            btn.style.color = "white";
+            startTimer(90);
+        }
+
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            document.getElementById('timer-bar').style.display = 'flex';
+            let timeLeft = seconds;
+            timerInterval = setInterval(() => {
+                let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+                document.getElementById('timer-display').innerText = ${m}:${s < 10 ? '0':''}${s};
+                if (timeLeft-- <= 0) clearInterval(timerInterval);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timer-bar').style.display = 'none';
+        }
+
+        function initChart() {
+            if(chartInstance) return;
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: ['שבוע 1', 'שבוע 2'], datasets: [{ label: 'משקל', data: [78.0, 76.5], borderColor: '#2563eb' }] }
+            });
+        }
+
+        loadWorkout('A');
+    </script>
+</body>
+</html>
